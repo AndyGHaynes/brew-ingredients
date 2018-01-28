@@ -24,7 +24,7 @@ function sanitizeRegexInput(input) {
   return input.replace(/[^ 0-9a-z]/ig, '');
 }
 
-export async function initialize() {
+async function initialize() {
   let client;
   try {
     client = await openConnection();
@@ -68,7 +68,7 @@ async function initializeCollections(db) {
   }));
 }
 
-export async function search(query, ingredientType, key) {
+async function search(query, ingredientType, key) {
   let client;
   try {
     client = await openConnection();
@@ -91,5 +91,6 @@ export async function search(query, ingredientType, key) {
 }
 
 export default {
-  initialize
+  initialize,
+  search,
 }
