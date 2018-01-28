@@ -20,6 +20,10 @@ function getDatabase(client) {
   return client.db(databaseName);
 }
 
+function sanitizeRegexInput(input) {
+  return input.replace(/[^ 0-9a-z]/ig, '');
+}
+
 export async function initialize() {
   let client;
   try {
@@ -62,6 +66,28 @@ async function initializeCollections(db) {
       return await collection.insertMany(documents);
     }
   }));
+}
+
+export async function search(query, ingredientType, key) {
+  let client;
+  try {
+    client = await openConnection();
+    const db = getDatabase(client);
+    query = sanitizeRegexInput(query);
+
+    if (Object.keys(Collections).includes(ingredientType)) {
+      const collection = db.collection[ingredientType];
+      if (key) {
+        return await collection.find({
+          [key]: { $regex: new RegExp(`.*${query}.*`), $options: 'i' }
+        })
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    client && await client.close();
+  }
 }
 
 export default {
