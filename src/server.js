@@ -13,47 +13,40 @@ export function start() {
   const url = 'mongodb://localhost:27017';
   const name = 'BrewIngredients';
 
-  MongoClient.connect(url, (err, client) => {
-    initializeCollections(client.db(name))
-      .then(() => {
-        client.close();
-      });
+  MongoClient.connect(url, async (err, client) => {
+    await initializeCollections(client.db(name));
+    client.close();
   });
 }
 
-function initializeCollections(db) {
-  return Promise.all(Object.keys(collections).map((collectionName) =>
-    new Promise((resolve, reject) => {
-      const collection = db.collection(collectionName);
+async function initializeCollections(db) {
+  return Promise.all(Object.keys(collections).map(async (collectionName) => {
+    const collection = db.collection(collectionName);
+    const documents = collections[collectionName];
 
-      function create() {
-        return db.createCollection(collectionName, {
-          validator: {
-            $and: [
-              { name: { $type: 'string' } }
-            ]
-          }
-        });
+    let documentCount = 0;
+    if (truncateCollections) {
+      try {
+        await collection.drop();
+      } catch (e) {
+        console.error(e);
       }
+    } else {
+      documentCount = await collection.count();
+    }
 
-      function dropAndCreate() {
-        return collection.drop()
-          .then(create)
-          .catch(console.error);
-      }
+    if (documentCount === 0) {
+      await db.createCollection(collectionName, {
+        validator: {
+          $and: [
+            { name: { $type: 'string' } }
+          ]
+        }
+      });
+    }
 
-      (truncateCollections ? dropAndCreate() : create())
-        .then(() => collection.count())
-        .then((count) => {
-          if (count === 0) {
-            collection
-              .insertMany(collections[collectionName])
-              .then(resolve)
-              .catch(console.error);
-          }
-        })
-        .then(resolve)
-        .catch(reject);
-    })
-  ));
+    if (documentCount === 0) {
+      return await collection.insertMany(documents);
+    }
+  }));
 }

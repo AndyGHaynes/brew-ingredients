@@ -11,7 +11,7 @@ const nodeModules = fs.readdirSync('node_modules')
   }, {});
 
 module.exports = {
-  entry: './index.js',
+  entry: ['babel-polyfill', './index.js'],
   target: 'node',
   output: {
     path: path.join(__dirname, 'dist'),
