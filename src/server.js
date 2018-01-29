@@ -1,6 +1,7 @@
 import bodyParser from 'body-parser';
 import express from 'express';
 
+import config from './config';
 import db from './db';
 import { IngredientType } from './constants/search';
 
@@ -42,5 +43,5 @@ export function start() {
 
   ((port) => {
     app.listen(port, () => console.log(`API running on localhost:${port}`));
-  })(5000);
+  })(config.express.port);
 }

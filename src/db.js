@@ -1,5 +1,6 @@
 import { MongoClient, ObjectId } from 'mongodb';
 
+import config from './config';
 import ingredients from './ingredient-data';
 import { IngredientType } from './constants/search';
 
@@ -11,13 +12,11 @@ const Collections = {
 };
 
 async function openConnection() {
-  const url = 'mongodb://localhost:27017';
-  return await MongoClient.connect(url);
+  return await MongoClient.connect(config.mongo.url);
 }
 
 function getDatabase(client) {
-  const databaseName = 'BrewIngredients';
-  return client.db(databaseName);
+  return client.db(config.mongo.database);
 }
 
 function sanitizeRegexInput(input) {
@@ -113,20 +112,8 @@ async function searchIngredients(collection, key, query) {
       [key]: regexPredicate
     };
   } else {
-    const defaultSearchKeys = [
-      'name',
-      'description',
-      'characteristics',
-      'code',
-      'categories',
-      'aroma',
-      'styles',
-      'flavor',
-      'mfg'
-    ];
-
     predicate = {
-      $or: defaultSearchKeys.map(k => ({
+      $or: config.search.defaultSearchKeys.map(k => ({
         [k]: regexPredicate
       }))
     };
@@ -134,7 +121,7 @@ async function searchIngredients(collection, key, query) {
 
   return await collection
     .find(predicate)
-    .limit(10)
+    .limit(config.search.resultsLimit)
     .toArray();
 }
 
