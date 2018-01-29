@@ -33,6 +33,11 @@ export function start() {
         data: await db.search(query, ingredientType, key)
       }));
     });
+
+  app.get('/random', async (req, res) => {
+    res.send(JSON.stringify({
+      data: await db.getRandomIngredient()
+    }));
   });
 
   ((port) => {

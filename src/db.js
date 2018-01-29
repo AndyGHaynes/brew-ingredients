@@ -79,6 +79,19 @@ async function getIngredient(id, ingredientType) {
   );
 }
 
+async function getRandomIngredient() {
+  return await queryDb(async (db) => {
+    const keys = Object.keys(IngredientType);
+    const ingredientType = IngredientType[keys[Math.ceil(Math.random() * 509) % keys.length]];
+    return (await db.collection(ingredientType)
+      .aggregate({
+        $sample: { size: 1 }
+      })
+      .limit(1)
+      .toArray())[0];
+  });
+}
+
 async function search(query, ingredientType, key) {
   return await queryDb(async (db) => {
     if (Object.keys(Collections).includes(ingredientType)) {
@@ -128,5 +141,6 @@ async function searchIngredients(collection, key, query) {
 export default {
   initialize,
   getIngredient,
+  getRandomIngredient,
   search
 }
