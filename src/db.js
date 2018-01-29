@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 import ingredients from './ingredient-data';
 import { IngredientType } from './constants/search';
@@ -68,6 +68,20 @@ async function initializeCollections(db) {
   }));
 }
 
+async function getIngredient(id, ingredientType) {
+  let client;
+  try {
+    client = await openConnection();
+    return await getDatabase(client)
+      .collection(ingredientType)
+      .findOne(ObjectId(id));
+  } catch (e) {
+    console.error(e);
+  } finally {
+    client && await client.close();
+  }
+}
+
 async function search(query, ingredientType, key) {
   let client;
   try {
@@ -123,5 +137,6 @@ async function search(query, ingredientType, key) {
 
 export default {
   initialize,
-  search,
+  getIngredient,
+  search
 }
