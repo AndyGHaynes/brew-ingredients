@@ -24,16 +24,20 @@ function sanitizeRegexInput(input) {
   return input.replace(/[^ 0-9a-z]/ig, '');
 }
 
-async function initialize() {
+async function queryDb(operation) {
   let client;
   try {
     client = await openConnection();
-    await initializeCollections(getDatabase(client));
+    return await operation(getDatabase(client));
   } catch (e) {
     console.error(e);
   } finally {
     client && await client.close();
   }
+}
+
+async function initialize() {
+  await queryDb(async (db) => await initializeCollections(db));
 }
 
 async function initializeCollections(db) {
@@ -69,70 +73,56 @@ async function initializeCollections(db) {
 }
 
 async function getIngredient(id, ingredientType) {
-  let client;
-  try {
-    client = await openConnection();
-    return await getDatabase(client)
-      .collection(ingredientType)
-      .findOne(ObjectId(id));
-  } catch (e) {
-    console.error(e);
-  } finally {
-    client && await client.close();
-  }
+  await queryDb(async (client, db) =>
+    await db.collection(ingredientType)
+      .findOne(ObjectId(id))
+  );
 }
 
 async function search(query, ingredientType, key) {
-  let client;
-  try {
-    let predicate;
-    client = await openConnection();
-    const db = getDatabase(client);
-    // TODO: check sanitized query for min length
-    const sanitizedQuery = sanitizeRegexInput(query);
-    const regexPredicate = {
-      $regex: new RegExp(`.*${sanitizedQuery}.*`),
-      $options: 'i'
-    };
-
+  return await queryDb(async (db) => {
     if (Object.keys(Collections).includes(ingredientType)) {
-      const collection = db.collection(ingredientType);
-      if (key) {
-        predicate = {
-          [key]: regexPredicate
-        };
-      } else {
-        const defaultSearchKeys = [
-          'name',
-          'description',
-          'characteristics',
-          'code',
-          'categories',
-          'aroma',
-          'styles',
-          'flavor',
-          'mfg'
-        ];
-
-        predicate = {
-          $or: defaultSearchKeys.map(k => ({
-            [k]: regexPredicate
-          }))
-        };
-      }
-
-      return await collection
-        .find(predicate)
-        .limit(10)
-        .toArray();
+      return await searchIngredients(db.collection(ingredientType), key, query);
     }
+  });
+}
 
-    return Promise.resolve([]);
-  } catch (e) {
-    console.error(e);
-  } finally {
-    client && await client.close();
+async function searchIngredients(collection, key, query) {
+  const sanitizedQuery = sanitizeRegexInput(query);
+  const regexPredicate = {
+    $regex: new RegExp(`.*${sanitizedQuery}.*`),
+    $options: 'i'
+  };
+
+  let predicate;
+  if (key) {
+    predicate = {
+      [key]: regexPredicate
+    };
+  } else {
+    const defaultSearchKeys = [
+      'name',
+      'description',
+      'characteristics',
+      'code',
+      'categories',
+      'aroma',
+      'styles',
+      'flavor',
+      'mfg'
+    ];
+
+    predicate = {
+      $or: defaultSearchKeys.map(k => ({
+        [k]: regexPredicate
+      }))
+    };
   }
+
+  return await collection
+    .find(predicate)
+    .limit(10)
+    .toArray();
 }
 
 export default {
